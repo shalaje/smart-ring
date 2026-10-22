@@ -21,6 +21,7 @@ export const scene = {
   holdFor: 0, // seconds the visitor has held the breathe button
   breath: 0, // 0 empty → 1 full lungs
   breathIn: true,
+  breathPhase: 0, // 0–1 through the current in or out breath
   beat: 0, // 0–1 heartbeat envelope at ~60 bpm
 
   night: 0, // single day→night value shared by background, fog and text

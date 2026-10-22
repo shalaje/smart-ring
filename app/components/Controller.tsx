@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useTier } from "~/lib/experience";
-import { channelsAt, keys, measureKeys, sectionAt, sectionY } from "~/lib/keys";
+import { channelsAt, keys, measureKeys, progressOf, sectionAt, sectionY } from "~/lib/keys";
+import { paintNight } from "~/lib/night";
+import { stepClock } from "~/three/clock";
 import { overlay, scene } from "~/lib/sceneState";
 import { scrollToY } from "~/lib/scroll";
 
@@ -34,21 +36,40 @@ export function Controller() {
     });
 
     const root = document.documentElement;
-    let night = -1;
-    let nightTw: gsap.core.Tween | null = null;
-    const paint = () => root.style.setProperty("--n", scene.night.toFixed(3));
+    let lastN = -1;
+    let nightClass = false;
     let lastIdx = -2;
+    // [data-fade="inFrom,inTo|outFrom,outTo"]: in = screens from the hold start, out = share of the hold
+    const fades = [...document.querySelectorAll<HTMLElement>("[data-fade]")].map((el) => {
+      const [i, o] = (el.dataset.fade ?? "").split("|").map((x) => x.split(",").map(Number));
+      return { el, key: el.closest<HTMLElement>("[data-key]")?.dataset.key ?? "", i, o, night: el.hasAttribute("data-after-night"), last: -1 };
+    });
+    const ramp = (v: number, a: number, b: number) => Math.min(1, Math.max(0, (v - a) / (b - a)));
     const tick = () => {
-      // one night value: target from the scroll channels, eased over ~1.2 s like a room dimming
-      const target = channelsAt(scene.scrollY, scene.phone).night > 0.5 ? 1 : 0;
-      if (target !== night) {
-        night = target;
-        root.classList.toggle("night", target === 1);
-        nightTw?.kill();
-        nightTw = gsap.to(scene, { night: target, duration: 1.2, ease: "sine.inOut", onUpdate: paint });
+      stepClock(scene.still);
+      // night is a pure function of scroll (scrubbed with the 3D), so scrolling back restores it
+      const c = channelsAt(scene.scrollY, scene.phone);
+      scene.night = c.night;
+      if (Math.abs(c.night - lastN) > 0.002 || (c.night === 0 && lastN !== 0) || (c.night === 1 && lastN !== 1)) {
+        lastN = c.night;
+        paintNight(c.night, root);
+        if (c.night > 0.5 !== nightClass) root.classList.toggle("night", (nightClass = c.night > 0.5));
+      }
+      for (const f of fades) {
+        const { s, p } = progressOf(f.key, scene.scrollY);
+        let o = 1;
+        if (f.i?.length === 2) o *= ramp(s, f.i[0], f.i[1]);
+        if (f.o?.length === 2) o *= 1 - ramp(p, f.o[0], f.o[1]);
+        if (f.night) o *= ramp(1 - scene.night, 0.96, 1);
+        o = Math.round(o * 100) / 100;
+        if (o !== f.last) {
+          f.last = o;
+          f.el.style.opacity = String(o);
+          f.el.style.pointerEvents = o < 0.05 ? "none" : "";
+        }
       }
       const sec = sectionAt(window.scrollY);
-      const i = SIGNALS.findIndex((s) => s.key === sec);
+      const i = SIGNALS.findIndex((x) => x.key === sec);
       if (i !== lastIdx) setIdx((lastIdx = i));
       if (overlay.beatDots.size) {
         const o = (0.35 + 0.65 * Math.min(1, scene.beat)).toFixed(2);
@@ -61,7 +82,6 @@ export function Controller() {
     return () => {
       clearTimeout(t);
       gsap.ticker.remove(tick);
-      nightTw?.kill();
       ScrollTrigger.removeEventListener("refresh", onRefresh);
       tw.scrollTrigger?.kill();
       tw.kill();

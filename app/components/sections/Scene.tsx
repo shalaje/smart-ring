@@ -9,6 +9,8 @@ export function SceneSection({
   children,
   className = "",
   align = "left",
+  fade,
+  afterNight = false,
 }: {
   id: string;
   label: string;
@@ -16,10 +18,14 @@ export function SceneSection({
   children: React.ReactNode;
   className?: string;
   align?: "left" | "center";
+  /** "inFrom,inTo|outFrom,outTo": scrubbed opacity, see Controller */
+  fade?: string;
+  /** stay hidden until the night has fully lifted */
+  afterNight?: boolean;
 }) {
   return (
     <section id={id} data-key={id} aria-labelledby={`${id}-title`} aria-label={label} className={`relative ${height} ${className}`}>
-      <div className={`hold flex ${align === "left" ? "items-start lg:items-center" : "items-stretch"}`}>
+      <div data-fade={fade} data-after-night={afterNight || undefined} className={`hold flex ${align === "left" ? "items-start lg:items-center" : "items-stretch"}`}>
         {children}
       </div>
     </section>

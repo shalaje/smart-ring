@@ -21,20 +21,33 @@ export function TickerDriver({ active }: { active: boolean }) {
   return null;
 }
 
-/** Calls onReady after the first frames; then measures frame rate for the low-power fallback. */
+/**
+ * Calls onReady after the first frames, then checks the frame rate after warm-up. A slow
+ * device first drops to pixel ratio 1 and is measured again; only if it still can't hold
+ * ~27 fps does the page swap to still frames.
+ */
 export function Ready({ onReady, onSlow }: { onReady: () => void; onSlow?: () => void }) {
   const n = useRef(0);
   const samples = useRef<number[]>([]);
-  useFrame((_, dt) => {
+  const lowered = useRef(false);
+  const setDpr = useThree((s) => s.setDpr);
+  useFrame(() => {
     n.current++;
     if (n.current === 3) onReady();
-    // frames 30–120: if the device can't hold ~30 fps, the page swaps to still frames
-    if (onSlow && n.current > 30 && n.current <= 120) {
-      samples.current.push(dt);
-      if (n.current === 120) {
-        const s = [...samples.current].sort((a, b) => a - b);
-        const median = s[Math.floor(s.length / 2)];
-        if (median > 1 / 28) onSlow();
+    if (!onSlow || document.visibilityState !== "visible") return;
+    const now = performance.now();
+    if (n.current > 60 && n.current <= 200) samples.current.push(now);
+    if (n.current === 200) {
+      const t = samples.current;
+      const d = t.slice(1).map((v, i) => v - t[i]).sort((a, b) => a - b);
+      const median = d[Math.floor(d.length / 2)] / 1000;
+      samples.current = [];
+      if (median > 1 / 27) {
+        if (!lowered.current) {
+          lowered.current = true;
+          setDpr(1);
+          n.current = 60; // measure again at the lower resolution
+        } else onSlow();
       }
     }
   });

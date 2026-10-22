@@ -3,13 +3,11 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { channelsAt } from "~/lib/keys";
 import { overlay, scene, smooth } from "~/lib/sceneState";
-import { stepClock } from "./clock";
+import { nightBg } from "~/lib/night";
 import { cutPlane, Ring, ringU, sensorAnchors, sensorGlow } from "./Ring";
 import { Glow, makeGlowU, raw, Ripple, rippleU, SleepBands, sleepU } from "./Signals";
 import { Sphere, sphereU } from "./Sphere";
 
-const DAWN = new THREE.Color("#F4EFE9");
-const NIGHT = new THREE.Color("#12131F");
 const COOL = "#8FAFD8";
 const WARM = "#E3A257";
 const C = {
@@ -51,8 +49,9 @@ export function Director({ phone }: { phone: boolean }) {
 
   useFrame((_, delta) => {
     const cam = camera as THREE.PerspectiveCamera;
-    const dt = scene.still ? 0 : delta;
-    const phase = stepClock(dt);
+    // the clock is stepped by the Controller (it runs even without the canvas)
+    const dt = scene.still ? 0 : delta * scene.timeScale;
+    const phase = scene.clock % 1;
     const c = channelsAt(scene.scrollY, phone);
     // Contra cover: the ring at dawn with all three signals leaving it as light
     if (scene.shot === "cover") Object.assign(c, { ring: 1, glow: 1, heart: 1, sleep: 0.16, temp: 0.6, warmth: 0.85, merge: 0, point: 0, app: 0, cut: 0, spark: 0, spin: 0, rx: -0.62, ry: 0.32, camZ: 5.6, sx: 0.17, sy: 0 });
@@ -119,9 +118,9 @@ export function Director({ phone }: { phone: boolean }) {
     sparkU.uTime.value = t;
 
     // night: one value for background, fog and (via the controller) the page text
-    bg.copy(DAWN).lerp(NIGHT, scene.night);
+    bg.setRGB(nightBg[0], nightBg[1], nightBg[2], THREE.SRGBColorSpace);
     tint.copy(tintCool).lerp(tintWarm, c.warmth);
-    bg.lerp(tint, c.temp * 0.16 * (1 - scene.night));
+    bg.lerp(tint, c.temp * (0.06 + 0.08 * c.warmth) * (1 - scene.night));
     (three.background as THREE.Color).copy(bg);
     three.fog!.color.copy(bg);
     const fog = three.fog as THREE.Fog;
@@ -134,7 +133,9 @@ export function Director({ phone }: { phone: boolean }) {
     sphereU.uBreath.value = scene.breath;
     sphereU.uNight.value = scene.night;
     sphereU.uGlow.value = c.point * 0.6;
-    let s = c.merge * 0.5 * (1 + scene.breath * 0.18) + c.point * 0.035;
+    // radius from the layout's slot (share of screen height), so the sphere never overlaps text
+    const visH = 2 * Math.abs(c.camZ) * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
+    let s = c.merge * c.sz * visH * (1 + scene.breath * 0.15) + c.point * 0.035;
     const sp = sphere.current!;
     sp.position.set(0, 0, 0);
     if (c.app > 0.001 && overlay.phoneScreen) {

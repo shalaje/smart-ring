@@ -1,33 +1,42 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import { useTier } from "~/lib/experience";
+import { useDemote, useTier } from "~/lib/experience";
 import { scene } from "~/lib/sceneState";
 import { sectionAt } from "~/lib/keys";
 
 const Stage = lazy(() => import("~/three/Stage"));
 
-/** Still frame per section for reduced motion, no WebGL, or a device that can't hold 30 fps. */
+/**
+ * Still frame per section for reduced motion, no WebGL, or a device that can't hold the frame
+ * rate. Readiness and Breathe have no still: their sphere is drawn in the layout itself.
+ * Sleep is not chosen by section: its frame's opacity is the scrubbed night value.
+ */
 const STILL: Record<string, string | null> = {
-  hero: "hero", heart: "heart", sleep: "sleep", temp: "temp", ready: "ready", breathe: "ready",
+  hero: "hero", heart: "heart", sleep: null, temp: "temp", ready: null, breathe: null,
   ring: "ring", app: null, privacy: "privacy", faq: null, footer: "footer",
 };
+const FRAMES = ["hero", "heart", "temp", "ring", "privacy", "footer"];
 
 /**
  * The single persistent canvas behind the page: every section is transparent and the ring is
- * always there. The loader is the ring's own inner light filling 0 → 100%.
+ * always there. The loader is the ring's own inner light filling 0 → 100%; until the first
+ * frame is drawn the hero still sits in the same spot, so the ring never pops in.
  */
 export function SceneLayer() {
   const tier = useTier();
-  const [slow, setSlow] = useState(false);
-  const live = (tier === "full" || tier === "mobile") && !slow;
+  const demote = useDemote();
+  const live = tier === "full" || tier === "mobile";
   const [mountStage, setMountStage] = useState(false);
   const [ready, setReady] = useState(false);
   const [active, setActive] = useState(true);
   const [pct, setPct] = useState(0);
   const [still, setStill] = useState<string | null>("hero");
-  const counter = useRef({ v: 0 });
+  const [scrolled, setScrolled] = useState(false);
   const [forced, setForced] = useState(false);
   const [phone, setPhone] = useState(false);
+  const counter = useRef({ v: 0 });
+  const night = useRef<HTMLImageElement>(null);
+
   // decided after hydration so the pre-rendered poster markup matches
   useEffect(() => {
     setForced(new URLSearchParams(location.search).has("tier"));
@@ -63,17 +72,22 @@ export function SceneLayer() {
   useEffect(() => {
     const onVis = () => setActive(document.visibilityState === "visible");
     document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      removeEventListener("scroll", onScroll);
+    };
   }, []);
 
-  // still frames follow the section in view
+  // still frames: follow the section in view; the night frame follows the night value
   useEffect(() => {
     if (live || tier === "pending") return;
     let last = "";
     const tick = () => {
-      const s = STILL[sectionAt(window.scrollY)] ?? null;
-      const k = s ?? "";
+      const k = STILL[sectionAt(scene.scrollY)] ?? "";
       if (k !== last) setStill((last = k) || null);
+      if (night.current) night.current.style.opacity = scene.night.toFixed(3);
     };
     gsap.ticker.add(tick);
     return () => gsap.ticker.remove(tick);
@@ -84,28 +98,39 @@ export function SceneLayer() {
   return (
     <div id="stage" className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[100svh] bg-[var(--bg)]" aria-hidden>
       {!live &&
-        Object.values(STILL)
-          .filter((v, i, a) => v && a.indexOf(v) === i)
-          .map((k) => (
-            <img
-              key={k}
-              src={`/posters/${k}-${suffix}.webp`}
-              alt=""
-              loading={k === "hero" ? "eager" : "lazy"}
-              decoding="async"
-              className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-[var(--ease)]"
-              style={{ opacity: still === k ? 1 : 0 }}
-            />
-          ))}
+        FRAMES.map((k) => (
+          <img
+            key={k}
+            src={`/posters/${k}-${suffix}.webp`}
+            alt=""
+            loading={k === "hero" ? "eager" : "lazy"}
+            decoding="async"
+            className="absolute inset-x-0 top-0 h-[100svh] w-full object-cover object-top transition-opacity duration-[700ms] ease-[var(--ease)]"
+            style={{ opacity: still === k ? 1 : 0 }}
+          />
+        ))}
+      {!live && <img ref={night} src={`/posters/sleep-${suffix}.webp`} alt="" loading="lazy" decoding="async" className="absolute inset-x-0 top-0 h-[100svh] w-full object-cover object-top" style={{ opacity: 0 }} />}
+      {/* live: the hero still holds the ring's place until the first frame is drawn */}
+      {live && (
+        <img
+          src={`/posters/hero-${suffix}.webp`}
+          alt=""
+          decoding="async"
+          className="absolute inset-x-0 top-0 z-[1] h-[100svh] w-full object-cover object-top transition-opacity duration-[400ms]"
+          style={{ opacity: ready ? 0 : 1 }}
+        />
+      )}
       {live && mountStage && (
         <div className="absolute inset-0">
           <Suspense fallback={null}>
-            <Stage lite={tier === "mobile"} active={active} onReady={() => setReady(true)} onSlow={forced ? undefined : () => setSlow(true)} />
+            <Stage lite={tier === "mobile"} active={active} onReady={() => setReady(true)} onSlow={forced ? undefined : demote} />
           </Suspense>
         </div>
       )}
       {live && (
-        <div className={`overlay absolute bottom-6 left-1/2 -translate-x-1/2 text-center font-mono text-[12px] uppercase tracking-[0.05em] text-muted transition-opacity duration-700 lg:left-6 lg:translate-x-0 lg:text-left ${done ? "opacity-0 delay-[1400ms]" : "opacity-100"}`}>
+        <div
+          className={`overlay absolute left-1/2 top-[38svh] z-[2] -translate-x-1/2 whitespace-nowrap text-center font-mono text-[11px] uppercase tracking-[0.05em] text-muted transition-opacity duration-500 lg:bottom-6 lg:left-6 lg:top-auto lg:translate-x-0 lg:text-left lg:text-[12px] ${done || scrolled ? "opacity-0" : "opacity-100"} ${done ? "delay-[1400ms]" : ""}`}
+        >
           <span className="mr-3">Filling the light</span>
           <span className="tnum text-fg">{String(pct).padStart(3, "0")}%</span>
         </div>

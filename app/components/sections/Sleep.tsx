@@ -40,7 +40,7 @@ function ClockRing() {
 
 export function Sleep() {
   return (
-    <SceneSection id="sleep" label="Sleep" height="lg:h-[280svh] h-[250svh]">
+    <SceneSection id="sleep" label="Sleep" height="lg:h-[300svh] h-[280svh]" fade="-0.12,0.03|0.64,0.76">
       {/* a soft scrim so the copy stays readable while the waves rush past */}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,var(--bg)_0%,color-mix(in_oklab,var(--bg)_80%,transparent)_45%,transparent_62%)] lg:bg-[linear-gradient(to_right,var(--bg)_0%,color-mix(in_oklab,var(--bg)_78%,transparent)_30%,transparent_52%)]" aria-hidden />
       <div className="site relative grid grid-cols-12 phone-gap">

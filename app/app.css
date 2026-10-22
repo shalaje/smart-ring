@@ -161,7 +161,14 @@ html.night :focus-visible {
 /* Phones: the 3D owns the top 40svh; text sits in the space below. */
 .phone-gap {
   @media (max-width: 1023px) {
-    padding-top: 44svh;
+    padding-top: 42svh;
+  }
+}
+/* the signal pill floats at the bottom: held content always clears it */
+.hold {
+  padding-bottom: calc(44px + 16px + 24px + env(safe-area-inset-bottom));
+  @media (min-width: 1024px) {
+    padding-bottom: calc(44px + 24px + 24px);
   }
 }
 

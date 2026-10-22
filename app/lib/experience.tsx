@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { detectTier, type Tier } from "./device";
 import { registerGsap, startLenis, stopLenis } from "./scroll";
 import { scene } from "./sceneState";
@@ -7,6 +7,10 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 const Ctx = createContext<Tier>("pending");
 export const useTier = () => useContext(Ctx);
+
+/** Weak-device fallback: the frame-rate check can demote the live tier to still frames. */
+const DemoteCtx = createContext<() => void>(() => {});
+export const useDemote = () => useContext(DemoteCtx);
 
 /**
  * Decides the experience tier after hydration (the pre-rendered HTML is the poster version),
@@ -27,6 +31,8 @@ export function ExperienceProvider({ children, smooth = true }: { children: Reac
       // stills: never let gsap's lag smoothing slow the clock on a software renderer
       gsap.ticker.lagSmoothing(0);
     }
+    // debug tiers (?tier=) and stills run on wall-clock time even on a software renderer
+    if (q.has("tier")) gsap.ticker.lagSmoothing(0);
     scene.tilt = t === "full";
     scene.still = t === "still";
     const phoneMq = window.matchMedia("(max-width: 1023px)");
@@ -48,5 +54,14 @@ export function ExperienceProvider({ children, smooth = true }: { children: Reac
     };
   }, [smooth]);
 
-  return <Ctx.Provider value={tier}>{children}</Ctx.Provider>;
+  const demote = useCallback(() => {
+    scene.tilt = false;
+    setTier("poster");
+  }, []);
+
+  return (
+    <DemoteCtx.Provider value={demote}>
+      <Ctx.Provider value={tier}>{children}</Ctx.Provider>
+    </DemoteCtx.Provider>
+  );
 }

@@ -39,7 +39,7 @@ function Trend() {
 
 export function Temperature() {
   return (
-    <SceneSection id="temp" label="Temperature" height="lg:h-[240svh] h-[210svh]">
+    <SceneSection id="temp" label="Temperature" height="lg:h-[240svh] h-[210svh]" fade="-0.6,-0.25|0.82,0.97" afterNight>
       <div className="site grid grid-cols-12 phone-gap">
         <Reveal className="col-span-12 lg:col-span-5">
           <Eyebrow n="03" color="#B8752F">Temperature</Eyebrow>

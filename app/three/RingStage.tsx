@@ -14,7 +14,7 @@ function Turntable({ autoRotate }: { autoRotate: boolean }) {
   const g = useRef<THREE.Group>(null);
   const yaw = useRef(0.5);
   useFrame((_, dt) => {
-    stepClock(dt);
+    stepClock();
     if (!drag.down) {
       drag.vx *= Math.exp(-dt * 3);
       yaw.current += drag.vx * dt + (autoRotate ? dt * 0.25 : 0);

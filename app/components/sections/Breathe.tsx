@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { SceneSection } from "./Scene";
-import { Reveal } from "../ui/Reveal";
+import { CssSphere } from "../ui/CssSphere";
 import { useTier } from "~/lib/experience";
 import { scene } from "~/lib/sceneState";
 import { breathCountdown } from "~/three/clock";
@@ -18,7 +18,11 @@ function HoldButton() {
   useEffect(() => {
     let last = "";
     const tick = () => {
-      if (ring.current) ring.current.style.strokeDashoffset = String(CIRC * (1 - scene.breath));
+      // the ring fills over each phase: 4 s in, then 6 s out
+      if (ring.current) {
+        ring.current.style.strokeDashoffset = String(CIRC * (1 - (scene.holding ? scene.breathPhase : 0)));
+        ring.current.style.stroke = scene.breathIn ? "var(--calm)" : "var(--sleep)";
+      }
       const l = scene.holding ? `${scene.breathIn ? "In" : "Out"} · ${breathCountdown()}` : "Hold";
       if (l !== last) setLabel((last = l));
     };
@@ -55,7 +59,7 @@ function HoldButton() {
         onKeyUp={(e) => (e.key === " " || e.key === "Enter") && set(false)}
         onBlur={() => set(false)}
         onContextMenu={(e) => e.preventDefault()}
-        className={`relative grid size-[124px] touch-none select-none place-items-center rounded-full border border-line bg-card/80 backdrop-blur-sm transition-transform duration-[400ms] ease-[var(--ease)] [-webkit-touch-callout:none] ${holding ? "scale-[1.04]" : "hover:scale-[1.02]"}`}
+        className={`relative grid size-[108px] touch-none lg:size-[124px] select-none place-items-center rounded-full border border-line bg-card/80 backdrop-blur-sm transition-transform duration-[400ms] ease-[var(--ease)] [-webkit-touch-callout:none] ${holding ? "scale-[1.04]" : "hover:scale-[1.02]"}`}
       >
         <svg viewBox="0 0 124 124" className="absolute inset-0 size-full -rotate-90" aria-hidden>
           <circle cx="62" cy="62" r={R} fill="none" stroke="currentColor" strokeOpacity="0.12" strokeWidth="3" />
@@ -94,18 +98,24 @@ function StaticGuide() {
 
 export function Breathe() {
   const tier = useTier();
-  const live = tier === "full" || tier === "mobile";
+  const reduced = tier === "still";
   return (
-    <SceneSection id="breathe" label="Breathe with me" height="lg:h-[170svh] h-[160svh]" align="center">
-      <div className="site flex min-h-[100svh] flex-col justify-between pb-24 pt-24 lg:pb-14 lg:pt-28">
-        <Reveal className="mx-auto max-w-[34ch] text-center">
-          <p className="text-label text-muted"><span className="tnum" style={{ color: "#4F8C78" }}>05</span>&nbsp;&nbsp;&nbsp;Breathe with me</p>
-          <h2 id="breathe-title" className="text-h2 mt-4">Slow down with it.</h2>
-          <p className="mt-4 text-[16px] leading-relaxed text-muted">
+    <SceneSection id="breathe" label="Breathe with me" height="lg:h-[200svh] h-[200svh]" align="center" fade="-0.06,0.03|0.86,1">
+      <div className="site flex h-[calc(100svh-84px-env(safe-area-inset-bottom))] flex-col pt-20 lg:h-[calc(100svh-92px)] lg:pt-24">
+        <div className="mx-auto max-w-[34ch] text-center">
+          <p className="text-label text-muted">
+            <span className="tnum" style={{ color: "#4F8C78" }}>05</span>&nbsp;&nbsp;&nbsp;Breathe with me
+          </p>
+          <h2 id="breathe-title" className="text-h2 mt-3 lg:mt-4">Slow down with it.</h2>
+          <p className="mt-3 text-[15px] leading-relaxed text-muted lg:mt-4 lg:text-[16px]">
             Hold the button and breathe with the sphere: in for four, out for six. The whole page slows down with you.
           </p>
-        </Reveal>
-        <div className="flex justify-center pb-6">{live ? <HoldButton /> : <StaticGuide />}</div>
+        </div>
+        {/* the sphere's place: at least 32 px clear of the copy above and the button below */}
+        <div data-slot className="my-8 flex min-h-0 flex-1 items-center justify-center">
+          {tier !== "pending" && tier !== "full" && tier !== "mobile" && <CssSphere breathing={!reduced} />}
+        </div>
+        <div className="flex justify-center">{reduced ? <StaticGuide /> : <HoldButton />}</div>
       </div>
     </SceneSection>
   );

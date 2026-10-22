@@ -4,7 +4,7 @@ import { Concept, Signal } from "../ui/Signal";
 
 export function Heart() {
   return (
-    <SceneSection id="heart" label="Heart">
+    <SceneSection id="heart" label="Heart" fade="-9,-8|0.8,0.97">
       <div className="site grid grid-cols-12 phone-gap">
         <Reveal className="col-span-12 lg:col-span-5">
           <Eyebrow n="01">Heart</Eyebrow>
