@@ -1,0 +1,4 @@
+# Sela (design concept)
+Sela is a fictional smart ring, a portfolio concept by Nova Digital Studio. It is not a real product or a medical device. All figures, scores, reviews and prices are invented.
+- /: the signals story (heart, sleep, temperature), the Readiness score, Breathe with me, the ring, the app, privacy and FAQ
+- /ring: choose a finish and size (concept pre-order, no payment)

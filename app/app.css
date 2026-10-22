@@ -1,0 +1,219 @@
+@import "tailwindcss";
+
+:root {
+  --dawn: #f4efe9;
+  --surface: #fbf9f6;
+  --ink: #1d1b20;
+  --ink-muted: #5f5a63;
+  --line: #e2dbd2;
+  --night: #12131f;
+  --pulse: #a8432e;
+  --sleep: #8e93e6;
+  --warm: #e3a257;
+  --calm: #7fb5a3;
+  --ease: cubic-bezier(0.25, 1, 0.5, 1);
+
+  /* One night value (0 → 1) shared with the 3D background and fog: text and cards follow it. */
+  --n: 0;
+  --np: calc(var(--n) * 100%);
+  --bg: color-mix(in oklab, var(--dawn), var(--night) var(--np));
+  --fg: color-mix(in oklab, var(--ink), var(--dawn) var(--np));
+  --fg-muted: color-mix(in oklab, var(--ink-muted), #aaa8b8 var(--np));
+  --card: color-mix(in oklab, var(--surface), #1b1c2c var(--np));
+  --rule: color-mix(in oklab, var(--line), #2b2d42 var(--np));
+}
+
+@theme inline {
+  --color-dawn: var(--dawn);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--fg-muted);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--rule);
+  --color-night: var(--night);
+  --color-pulse: var(--pulse);
+  --color-sleep: var(--sleep);
+  --color-warm: var(--warm);
+  --color-calm: var(--calm);
+  --color-fg: var(--fg);
+  --color-card: var(--card);
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+  --radius-card: 22px;
+}
+
+@utility text-display {
+  font-family: var(--font-serif);
+  font-size: clamp(48px, 1.6rem + 5.6vw, 96px);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+}
+@utility text-h2 {
+  font-family: var(--font-serif);
+  font-size: clamp(34px, 1.3rem + 2.9vw, 56px);
+  line-height: 1.04;
+  letter-spacing: -0.015em;
+  font-weight: 400;
+}
+@utility text-h3 {
+  font-size: clamp(21px, 1.15rem + 0.55vw, 26px);
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  font-weight: 500;
+}
+@utility text-body {
+  font-size: clamp(16px, 0.95rem + 0.22vw, 18px);
+  line-height: 1.6;
+}
+@utility text-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.35;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+@utility text-score {
+  font-family: var(--font-mono);
+  font-size: clamp(64px, 2rem + 6.4vw, 120px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 300;
+}
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+@utility measure {
+  max-width: 44ch;
+}
+@utility section-pad {
+  padding-block: 96px;
+  @media (min-width: 1024px) {
+    padding-block: 160px;
+  }
+}
+@utility site {
+  width: 100%;
+  max-width: calc(1280px + 48px);
+  margin-inline: auto;
+  padding-inline: 16px;
+  @media (min-width: 768px) {
+    padding-inline: 24px;
+  }
+}
+
+html {
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: clip;
+}
+::selection {
+  background: var(--pulse);
+  color: var(--dawn);
+}
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+:focus-visible {
+  outline: 2px solid var(--pulse);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+html.night :focus-visible {
+  outline-color: var(--sleep);
+}
+.skip-link {
+  position: fixed;
+  left: 16px;
+  top: -60px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--dawn);
+  transition: top 0.4s var(--ease);
+}
+.skip-link:focus {
+  top: 12px;
+}
+
+/* Sticky scene sections: the section is tall, its content holds for the scene's moment. */
+.hold {
+  position: sticky;
+  top: 0;
+  min-height: 100svh;
+}
+/* Phones: the 3D owns the top 40svh; text sits in the space below. */
+.phone-gap {
+  @media (max-width: 1023px) {
+    padding-top: 44svh;
+  }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 1s var(--ease),
+    transform 1s var(--ease);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+html:not(.js) .reveal {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* signal dots beat with the ring (opacity set from the shared clock) */
+.beat-dot {
+  transition: none;
+}
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+.no-bar {
+  scrollbar-width: none;
+}
+.no-bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* the phone mockup's screen is a window onto the canvas, so the sphere shows through it */
+.phone-glass {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 35%, transparent), transparent 40%, transparent 70%, color-mix(in oklab, var(--surface) 55%, transparent));
+}
+
+html.capture body > *:not(#stage):not(script),
+html.capture header {
+  visibility: hidden !important;
+}
+html.capture #stage .overlay {
+  display: none;
+}
